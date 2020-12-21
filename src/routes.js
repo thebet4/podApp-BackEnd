@@ -3,7 +3,7 @@ const userController = require('./controllers/userController');
 
 
 const routes = Router();
-    routes.get('/user/login', (request, response) => {
+    routes.get('/', (request, response) => {
         response.send({"msg":"ok"})
     });
 
