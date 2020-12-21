@@ -17,7 +17,7 @@ module.exports = {
         if(emailAlreadyExists.length > 0) response.json(returns.setReturn("409","user already exists"));
 
         //check if password and confirmPassword are the shame
-        if(password !== confirmPassword) response.json(returns.setReturn("422","passwords do not match"));
+        if(password !== confirmPassword) response.json(returns.setReturn("422","passwords do not match!"));
 
         // encrypt password
         let encryptPassword = await crypt.encrypt("123")
