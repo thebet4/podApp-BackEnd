@@ -8,96 +8,126 @@ module.exports = {
         let {name, email, password, confirmPassword} = request.body;
         
         //check if all fields have been filled
-        if(!name || !email || !password || !confirmPassword) response.json(returns.setReturn("422 ","missing parameter"));
+        if(name && email && password && confirmPassword) {
 
-        // Search for a user with that email
-        let emailAlreadyExists = await db('users').select('*').where("email",email);
+            // Search for a user with that email
+            let emailAlreadyExists = await db('users').select('*').where("email",email);
 
-        // check if email already exists in database
-        if(emailAlreadyExists.length > 0) response.json(returns.setReturn("409","user already exists"));
+            // check if email already exists in database
+            if(emailAlreadyExists.length == 0){
 
-        //check if password and confirmPassword are the shame
-        if(password !== confirmPassword) response.json(returns.setReturn("422","passwords do not match!"));
+                //check if password and confirmPassword are the shame
+                if(password == confirmPassword) {
 
-        // encrypt password
-        let encryptPassword = await crypt.encrypt("123")
+                    // encrypt password
+                    let encryptPassword = await crypt.encrypt(password)
 
-        let user = {
-            name,
-            email,
-            password: encryptPassword
+                    let user = {
+                        name,
+                        email,
+                        password: encryptPassword
+                    }
+
+                    let dbRes = await db('users').insert(user).returning("*")
+
+                    // Generate a Authentication Token
+                    let token = Token.generateToken({id:dbRes[0].id});
+
+                    let resUser = {
+                        id: dbRes[0].id,
+                        name:dbRes[0].name,
+                        email:dbRes[0].email,
+                        token:token
+                    }
+                    return response.json(returns.setReturn("200","Usuario registrado com sucesso",resUser));
+
+                }else{
+                    return response.json(returns.setReturn("422","As senhas devem ser iguais!"));
+                }
+
+            }else{
+                return response.json(returns.setReturn("409","Email já cadastrado"));
+            }
+
+
+
+        }else{
+            return response.json(returns.setReturn("422 ","Todos os campos devem ser preenchidos"));
         }
-
-        let dbRes = await db('users').insert(user).returning("*")
-
-        // Generate a Authentication Token
-        let token = Token.generateToken({id:dbRes[0].id});
-
-        let resUser = {
-            id: dbRes[0].id,
-            name:dbRes[0].name,
-            email:dbRes[0].email,
-            token:token
-        }
-        return response.json(returns.setReturn("200","user successfully registered",resUser));
     },
 
-    async delete(request,response){
-        const {id} = request.body;
+    // async delete(request,response){
+    //     const {id} = request.body;
 
-        let user = await db('users').where('id',id).returning('*').del()
+    //     let user = await db('users').where('id',id).returning('*').del()
 
-        // check if there is a user with that email
-        if(!user.length) response.json(returns.setReturn("404 ","User not found"));
+    //     // check if there is a user with that email
+    //     if(!user.length) response.json(returns.setReturn("404 ","usuario não encontrado"));
 
-        return response.json(returns.setReturn("200","deleted",{id: user[0].id}));
-    },
+    //     return response.json(returns.setReturn("200","deleted",{id: user[0].id}));
+    // },
 
     async login(request, response){
 
         const {email,password} = request.body;
 
-        // Check if Token is Valid
-      
-        
         //check if all fields have been filled
-        if(!email || !password) response.json(returns.setReturn("422 ","missing parameter"));
+        if(email && password){
 
-        //check if email is valid
-        if(email.indexOf("@") < 0 || email.indexOf(".com") < 0) response.json(returns.setReturn("422 ","Invalid email"));
+            //check if email is valid
+            if(email.indexOf("@") > 0 && email.indexOf(".com") > 0){
 
-        // Search for a user in the database with the given email
-        let user = await  db('users').select('*').where("email",email);
+                // Search for a user in the database with the given email
+                let user = await  db('users').select('*').where("email",email);
 
-        // check if there is a user with that email
-        if(!user.length) response.json(returns.setReturn("404 ","User not found"));
+                // check if there is a user with that email
+                if(user.length > 0){
 
-        // Check if password is correct
-        if(!await crypt.decrypt(password,user[0].password) ) response.json(returns.setReturn("422 ","Invalid Password"));
+                    // Check if password is correct
+                    if(await crypt.decrypt(password,user[0].password) ){
 
-        // Generate a Authentication Token
-        let token = Token.generateToken({id:user[0].id});
+                        // Generate a Authentication Token
+                        let token = Token.generateToken({id:user[0].id});
 
-        // Return object with user data
-        let responseUser = {
-            id:user[0].id,
-            name:user[0].name,
-            email:user[0].email,
-            token: 'Bearer ' + token,
-        }
+                        // Return object with user data
+                        let responseUser = {
+                            id:user[0].id,
+                            name:user[0].name,
+                            email:user[0].email,
+                            token: 'Bearer ' + token,
+                        }
 
-        return response.json(returns.setReturn("200","ok",responseUser));
+                        return response.json(returns.setReturn("200","ok",responseUser));
+                        
+                    }else{
+                        return response.json(returns.setReturn("422 ","Senha invalida"));
+                    }
+        
+                }else{
+                    return response.json(returns.setReturn("404 ","usuario não encontrado"));
+                }
 
+            }else{
+                return response.json(returns.setReturn("422 ","Email invalido"));
+            }
+
+        }else{
+            return response.json(returns.setReturn("422 ","Todos os campos são obrigatórios"));  
+        } 
     },
 
     async refresh(request, response){
         const authToken = Token.validToken(request.headers.authorization);
-        if(authToken.error) response.json(returns.setReturn("401",authToken.error_msg));
-        let obj = {
-            token:request.headers.authorization,
-            id:authToken.id
+        if(!authToken.error){
+            let obj = {
+                token:request.headers.authorization,
+                id:authToken.id
+            }
+            return response.json(returns.setReturn("200","authenticated token",obj));
+        }else{   
+            response.json(returns.setReturn("401",authToken.error_msg));
         }
-        response.json(returns.setReturn("200","authenticated token",obj));
+
     }
 
 }
