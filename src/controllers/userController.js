@@ -58,8 +58,7 @@ module.exports = {
         const {email,password} = request.body;
 
         // Check if Token is Valid
-        const authToken = Token.validToken(request.headers.authorization);
-        if(authToken.error) response.json(returns.setReturn("401",authToken.error_msg));
+      
         
         //check if all fields have been filled
         if(!email || !password) response.json(returns.setReturn("422 ","missing parameter"));
@@ -84,11 +83,21 @@ module.exports = {
             id:user[0].id,
             name:user[0].name,
             email:user[0].email,
-            token:token
+            token: 'Bearer ' + token,
         }
 
         return response.json(returns.setReturn("200","ok",responseUser));
 
     },
+
+    async refresh(request, response){
+        const authToken = Token.validToken(request.headers.authorization);
+        if(authToken.error) response.json(returns.setReturn("401",authToken.error_msg));
+        let obj = {
+            token:request.headers.authorization,
+            id:authToken.id
+        }
+        response.json(returns.setReturn("200","authenticated token",obj));
+    }
 
 }

@@ -38,16 +38,19 @@ module.exports = {
         }
         
         let error = false;
-        jwt.verify(token, process.env.JWT_KEY, (err) => {
+        let id;
+        jwt.verify(token, process.env.JWT_KEY,(err,decoded) => {
             if(err){
                 error = true;
+            }else{
+                id = decoded.id
             }
         });
 
         if(error){
             return {error:true,error_msg:"Token invalid"}
         }else{
-            return {error:false}
+            return {error:false,id:id}
         }
 
     }
