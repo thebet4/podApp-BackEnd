@@ -5,7 +5,9 @@ exports.up = function(knex) {
       table.text('email').unique().notNullable()
       table.text('name').notNullable()
       table.text('password').notNullable()
-
+      table.text('photo')
+      table.text('passwordResetToken')
+      table.text('passwordResetExpires')
 
       table.timestamp('created_at').defaultTo(knex.fn.now())
       table.timestamp('updated_at').defaultTo(knex.fn.now()) 

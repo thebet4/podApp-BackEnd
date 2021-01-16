@@ -4,8 +4,9 @@ const returns = require('../utils/setReturn');
 const Token = require('../utils/jwt');
 
 module.exports = {
+    // Create a new user
     async create(request, response) {
-        let {name, email, password, confirmPassword} = request.body;
+        let {name, email, password, confirmPassword, photo} = request.body;
         
         //check if all fields have been filled
         if(name && email && password && confirmPassword) {
@@ -25,7 +26,8 @@ module.exports = {
                     let user = {
                         name,
                         email,
-                        password: encryptPassword
+                        password: encryptPassword,
+                        photo:photo
                     }
 
                     let dbRes = await db('users').insert(user).returning("*")
@@ -37,7 +39,7 @@ module.exports = {
                         id: dbRes[0].id,
                         name:dbRes[0].name,
                         email:dbRes[0].email,
-                        token:token
+                        token:'Bearer '+token
                     }
                     return response.json(returns.setReturn("200","Usuario registrado com sucesso",resUser));
 
@@ -56,17 +58,7 @@ module.exports = {
         }
     },
 
-    // async delete(request,response){
-    //     const {id} = request.body;
-
-    //     let user = await db('users').where('id',id).returning('*').del()
-
-    //     // check if there is a user with that email
-    //     if(!user.length) response.json(returns.setReturn("404 ","usuario não encontrado"));
-
-    //     return response.json(returns.setReturn("200","deleted",{id: user[0].id}));
-    // },
-
+    // User SignIn
     async login(request, response){
 
         const {email,password} = request.body;
@@ -82,7 +74,7 @@ module.exports = {
 
                 // check if there is a user with that email
                 if(user.length > 0){
-
+                    
                     // Check if password is correct
                     if(await crypt.decrypt(password,user[0].password) ){
 
@@ -94,6 +86,7 @@ module.exports = {
                             id:user[0].id,
                             name:user[0].name,
                             email:user[0].email,
+                            photo:user[0].photo,
                             token: 'Bearer ' + token,
                         }
 
@@ -116,6 +109,19 @@ module.exports = {
         } 
     },
 
+    // Forget Password
+    async forgetPassword(request,response){
+        const {email} = request.body;
+
+        try{
+            return response.json(returns.setReturn("200","Email para Alteração enviado"));
+        }catch(err){
+            return response.json(returns.setReturn("400","Erro ao recuperar senha, tente novamente"));
+        }
+
+    },
+
+    // Checks if token is valid
     async refresh(request, response){
         const authToken = Token.validToken(request.headers.authorization);
         if(!authToken.error){
@@ -125,9 +131,10 @@ module.exports = {
             }
             return response.json(returns.setReturn("200","authenticated token",obj));
         }else{   
-            response.json(returns.setReturn("401",authToken.error_msg));
+            return response.json(returns.setReturn("401",authToken.error_msg));
         }
 
-    }
+    },
+
 
 }
